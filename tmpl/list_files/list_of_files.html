@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>all your files</title>
+  </head>
+  <body>
+    <ul>
+	  {{range $index, $file := .Files }}
+        {{if isDirectory .}}
+		  <li><a href="{{index $.UrlToFile $index}}">{{ $file }}</a></li>
+        {{else}}
+		<li>{{ $file }}. <a href="/disk/download{{ index $.FullPathToDownload $index }}">Click to download.</a></li>
+        {{end}}
+      {{end}}
+    </ul>
+  </body>
+</html>

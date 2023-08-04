@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"os"
 
-
 	"github.com/Alphonnse/file_server/handlers"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/cors"
@@ -34,6 +33,12 @@ func main() {
 
 	router.Get("/healthz", handlers.HandlerReadiness)
 	router.Get("/err", handlers.ErrorHandler)
+
+	router.Get("/disk/upload", handlers.UploadGetHandler) 
+	router.Post("/disk/upload", handlers.UploadPostHandler)
+
+	router.Get("/disk/*", handlers.ListFiles)
+	router.Get("/disk/download/*", handlers.HandlerDownload)
 
 	srv := &http.Server {
 		Handler: 	router,
