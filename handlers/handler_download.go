@@ -1,29 +1,33 @@
 package handlers
 
 import (
-	"bytes"
-	"fmt"
-	"io"
-	"io/ioutil"
-	"log"
+	"encoding/json"
 	"net/http"
+	"os"
+	"path/filepath"
 )
 
 
 func HandlerDownload (w http.ResponseWriter, r *http.Request) {
-	path := r.URL.Path[len("/disk/download/"):]
-	fmt.Println(path)
+	w.Header().Set("Content-Type", "application/json")
 
-	file, err := ioutil.ReadFile(path)
-	if err != nil {
-		log.Println("there is error while reding the file", err)
-		respondWithError(w, 400, "shit")
-	}
+	// get the file name to download from url
+    name := r.URL.Query().Get("name")
 
-	_, err = io.Copy(w, bytes.NewReader(file))
-	if err != nil {
-		log.Println("error while copying the file")
-		respondWithError(w, 401, "error while creating the file")
-		return
-	}
+    // join to get the full file path
+    directory := filepath.Join("files", name)
+
+    // open file (check if exists)
+    _, err := os.Open(directory)
+    if err != nil {
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode("Unable to open file ")
+        return
+    }
+
+    // force a download with the content- disposition field
+    w.Header().Set("Content-Disposition", "attachment; filename="+filepath.Base(directory))
+
+    // serve file out.
+    http.ServeFile(w, r, directory)
 }

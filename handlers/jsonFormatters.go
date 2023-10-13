@@ -7,7 +7,7 @@ import (
 )
 
 
-func resondWithJSON(w http.ResponseWriter, statusCode int, payload interface{}) {
+func ResondWithJSON(w http.ResponseWriter, statusCode int, payload interface{}) {
 	data, err := json.Marshal(payload)
 	if err != nil {
 		log.Printf("Failed to marshal JSON response: %v", payload)
@@ -20,7 +20,7 @@ func resondWithJSON(w http.ResponseWriter, statusCode int, payload interface{}) 
 	w.Write(data)
 }
 
-func respondWithError(w http.ResponseWriter, ststusCode int, message string) {
+func RespondWithError(w http.ResponseWriter, ststusCode int, message string) {
 	if ststusCode > 499 { // errors in the 400 range is the client side errors
 		log.Println("Responding with 5XX error:", message)
 	}
@@ -29,7 +29,7 @@ func respondWithError(w http.ResponseWriter, ststusCode int, message string) {
 		Error string `json:"error"`
 	}
 
-	resondWithJSON(w, ststusCode, errorResponse{
+	ResondWithJSON(w, ststusCode, errorResponse{
 		Error:	message,
 	})
 }

@@ -1,16 +1,18 @@
 package handlers
 
 import (
+	"fmt"
 	"html/template"
 	"log"
 	"net/http"
 	"os"
 	"strings"
+
+	"github.com/Alphonnse/file_server/internal/database"
 )
 
-
-func entriesFromDir (dirName string) ([]string, error) {
-		entries, err := os.ReadDir(dirName)
+func entriesFromDir(dirName string) ([]string, error) {
+	entries, err := os.ReadDir(dirName)
 	if err != nil {
 		return nil, err
 	}
@@ -29,74 +31,83 @@ func entriesFromDir (dirName string) ([]string, error) {
 	return list[:i], err
 }
 
-
 func isDirectory(entry string) bool {
 	return strings.HasSuffix(entry, "/")
 }
 
 type Page struct {
-	Files []string
-	UrlToFile []string
+	FilesInDir         []string
+	UrlToFile          []string
 	FullPathToDownload []string
 }
 
-func ListFiles(w http.ResponseWriter, r *http.Request) {
-	
+func ListFilesNew(w http.ResponseWriter, r *http.Request, user database.User) {
+	// There might be a trouble with cookie, when using links into site
 	page := &Page{}
-	var err error	
+	var err error
 
-	page.Files, err = entriesFromDir(r.URL.Path[len("/files"):])
-	if err != nil {
-		log.Println("there is error while reading the dir:", r.URL.Path[len("/files"):])
-		respondWithError(w, 401, "Error while reading directory")
+	if strings.Split(r.URL.Path,"/")[1] != user.Name {
+		RespondWithError(w, 401, "Bad url")
 		return
 	}
-	
-	// page.UrlToFile = page.Files
 
-	for i := 0; i < len(page.Files); i ++ {
-		if r.URL.Path[len(r.URL.Path)-1:] == "/" {
-			page.UrlToFile = append(page.UrlToFile, r.URL.Path + page.Files[i])
-		} else {
-			page.UrlToFile = append(page.UrlToFile, r.URL.Path + "/" + page.Files[i])
-		}
+	page.FilesInDir, err = entriesFromDir(r.URL.Path[len(fmt.Sprintf("/"+user.Name+"/disk/")):])
 
-		page.FullPathToDownload = append(page.FullPathToDownload, page.UrlToFile[i][len("/disk"):])
+	if err != nil {
+		log.Println("there is error while reading the dir:", r.URL.Path[len(fmt.Sprintf("/"+user.Name+"/disk/")):])
+		RespondWithError(w, 401, "Error while reading directory")
+		return
 	}
 
+	for i := 0; i < len(page.FilesInDir); i++ {
+		// Thats about the dirs 
+		if r.URL.Path[len(r.URL.Path)-1:] == "/" {
+			page.UrlToFile = append(page.UrlToFile, r.URL.Path+page.FilesInDir[i])
+		} else {
+			page.UrlToFile = append(page.UrlToFile, r.URL.Path+"/"+page.FilesInDir[i])
+		}
 
-	// t, err := template.ParseFiles("tmpl/list_files/list_of_files.html")
+		// Thats about the files
+		page.FullPathToDownload = append(page.FullPathToDownload, page.UrlToFile[i][len("/disk"):]) // тут нужно поправить но пока не знаю как 
+	}
+
 	t, err := template.New("list_of_files.html").Funcs(template.FuncMap{"isDirectory": isDirectory}).ParseFiles("tmpl/list_files/list_of_files.html")
 	if err != nil {
 		log.Println("Error while parsing the template of list", err)
-		respondWithError(w, 401, "Error while reading directory")
+		RespondWithError(w, 401, "Error while reading directory")
 		return
 	}
 	t.Execute(w, page)
 }
 
-// func ListFiles(w http.ResponseWriter, r *http.Request) {
-// 	page := &Page{}
-//
-// 	var err error
-// 	page.Files, err = entriesFromDir(r.URL.Path[len("/files"):])
-// 	page.UrlToFile = page.Files
-// 	if err != nil {
-// 		log.Println("there is an error while reading the dir:", r.URL.Path[len("/files"):])
-// 		respondWithError(w, 401, "Error while reading directory")
-// 		return
-// 	}
-//
-// 	t, err := template.ParseFiles("tmpl/list_files/list_of_files.html")
-// 	if err != nil {
-// 		log.Println("Error while parsing the template of list", err)
-// 		respondWithError(w, 401, "Error while reading directory")
-// 		return
-// 	}
-//
-// 	err = t.Execute(w, page)
-// 	if err != nil {
-// 		log.Println("Error while executing the template:", err)
-// 		respondWithError(w, 500, "Internal Server Error")
-// 	}
-// }
+func ListFilesOld(w http.ResponseWriter, r *http.Request) {
+
+	page := &Page{}
+	var err error
+
+	page.FilesInDir, err = entriesFromDir(r.URL.Path[len("/files"):])
+
+	if err != nil {
+		log.Println("there is error while reading the dir:", r.URL.Path[len("/files"):])
+		RespondWithError(w, 401, "Error while reading directory")
+		return
+	}
+
+	for i := 0; i < len(page.FilesInDir); i++ {
+		if r.URL.Path[len(r.URL.Path)-1:] == "/" {
+			page.UrlToFile = append(page.UrlToFile, r.URL.Path+page.FilesInDir[i])
+		} else {
+			page.UrlToFile = append(page.UrlToFile, r.URL.Path+"/"+page.FilesInDir[i])
+		}
+
+		page.FullPathToDownload = append(page.FullPathToDownload, page.UrlToFile[i][len("/disk"):])
+	}
+
+	t, err := template.New("list_of_files.html").Funcs(template.FuncMap{"isDirectory": isDirectory}).ParseFiles("tmpl/list_files/list_of_files.html")
+	if err != nil {
+		log.Println("Error while parsing the template of list", err)
+		RespondWithError(w, 401, "Error while reading directory")
+		return
+	}
+	t.Execute(w, page)
+}

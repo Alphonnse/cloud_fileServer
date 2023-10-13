@@ -3,14 +3,23 @@
   <head>
     <meta charset="UTF-8">
     <title>all your files</title>
+  <style>
+    /* Убираем стандартное оформление ссылок */
+    .linkToView {
+      text-decoration: none; /* Убираем подчеркивание текста ссылки */
+      color: inherit; /* Наследуем цвет текста ссылки от родительского элемента */
+      /* cursor: default; /* Изменяем вид курсора на обычный текстовый */
+    }
+  </style>
   </head>
   <body>
     <ul>
-	  {{range $index, $file := .Files }}
+	  {{range $index, $file := .FilesInDir }}
         {{if isDirectory .}}
 		  <li><a href="{{index $.UrlToFile $index}}">{{ $file }}</a></li>
+		  <!-- <li><a href="{{index $.UrlToFile $index}}">{{index $.UrlToFile $index}}</a></li> -->
         {{else}}
-		<li>{{ $file }}. <a href="/disk/download{{ index $.FullPathToDownload $index }}">Click to download.</a></li>
+		<li><a class="linkToView" href="/disk/view{{ index $.FullPathToDownload $index }}">{{ $file }}. <a href="#"></a></a></li>
         {{end}}
       {{end}}
     </ul>

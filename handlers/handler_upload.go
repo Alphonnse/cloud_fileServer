@@ -43,20 +43,20 @@ func UploadPostHandler(w http.ResponseWriter, r *http.Request) {
 			dst, err := os.Create("./files/" + part.FileName())
 			if err != nil {
 				log.Println("err while creating the file")
-				respondWithError(w, 401, "error while creating the file")
+				RespondWithError(w, 401, "error while creating the file")
 				return
 			}
 			defer dst.Close()
 
 	        if _, err := io.Copy(dst, part); err != nil {
 				log.Println("error while copying the file")
-				respondWithError(w, 401, "error while creating the file")
+				RespondWithError(w, 401, "error while creating the file")
             	return
         	}
 		
         } else {
 			log.Println("no needed part")
-			respondWithError(w, 401, "error while creating the file")
+			RespondWithError(w, 401, "error while creating the file")
 			return
         }
     }
