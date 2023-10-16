@@ -1,27 +1,24 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="UTF-8">
-    <title>all your files</title>
-  <style>
-    /* Убираем стандартное оформление ссылок */
-    .linkToView {
-      text-decoration: none; /* Убираем подчеркивание текста ссылки */
-      color: inherit; /* Наследуем цвет текста ссылки от родительского элемента */
-      /* cursor: default; /* Изменяем вид курсора на обычный текстовый */
-    }
-  </style>
-  </head>
-  <body>
-    <ul>
-	  {{range $index, $file := .FilesInDir }}
-        {{if isDirectory .}}
-		  <li><a href="{{index $.UrlToFile $index}}">{{ $file }}</a></li>
-		  <!-- <li><a href="{{index $.UrlToFile $index}}">{{index $.UrlToFile $index}}</a></li> -->
-        {{else}}
-		<li><a class="linkToView" href="/disk/view{{ index $.FullPathToDownload $index }}">{{ $file }}. <a href="#"></a></a></li>
-        {{end}}
-      {{end}}
-    </ul>
-  </body>
+	<head>
+		<meta charset="UTF-8">
+		<title>all your files</title>
+  		<style>
+    		.linkToView {
+      			text-decoration: none;
+      			color: inherit;
+    		}
+  		</style>
+	</head>
+	<body>
+		<ul>
+			{{range $index, $file := .FilesInDir}}
+				{{if isDirectory .}}
+					<li><a href="{{index $.UrlToFile $index}}">{{ $file }}</a></li>
+				{{else}}
+					<li><a class="linkToView" href="{{index $.UrlToFile $index}}">{{ $file }}.<a href="#"></a></a></li>
+        		{{end}}
+      		{{end}}
+		</ul>
+	</body>
 </html>

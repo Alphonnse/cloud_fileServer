@@ -2,7 +2,6 @@ package main
 
 import (
 	"database/sql"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -66,11 +65,14 @@ func main() {
 		// give him access
 
 		// There might be a trouble with cookie, when using links into site
-		r.Get("/{path_of_dirs}*", apiWrapper.MiddlewareAuth(handlers.ListFilesNew))
-		r.Get("/{path_to_file}*", apiWrapper.MiddlewareAuth(handlers.HandlerView))
+		r.Get("/{path_of_dirs}*", apiWrapper.MiddlewareAuth(handlers.FS))
+
+		// r.Get("/{path_to_file}/{action}", apiWrapper.MiddlewareAuth(handlers.HandlerView))
 		
 
 	})
+	// router.Get("/{username}/{base_dir}/{path_to_file}/{action}", apiWrapper.MiddlewareAuth(handlers.HandlerView))
+	// router.Get("/{username}/{base_dir}/{path_to_dirs}*", apiWrapper.MiddlewareAuth(handlers.ListFilesNew))
 	
 
 	// I need to use url parameters here and username in the start of url
