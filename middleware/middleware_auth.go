@@ -23,9 +23,7 @@ func (apiCfg *ApiConfigWrapper) MiddlewareAuth(handler authedHandler) http.Handl
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Find out the token from cookie
 		tokenString, err := r.Cookie("Authorization")
-
 		if err != nil {
-			fmt.Println("its from midleware", r.URL.Path)
 			handlers.RespondWithError(w, 401, fmt.Sprint("Error with cookie:", err))
 			return
 		}

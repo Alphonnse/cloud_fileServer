@@ -1,24 +1,67 @@
+
 <!DOCTYPE html>
 <html>
-	<head>
-		<meta charset="UTF-8">
-		<title>all your files</title>
-  		<style>
-    		.linkToView {
-      			text-decoration: none;
-      			color: inherit;
-    		}
-  		</style>
-	</head>
-	<body>
-		<ul>
-			{{range $index, $file := .FilesInDir}}
-				{{if isDirectory .}}
-					<li><a href="{{index $.UrlToFile $index}}">{{ $file }}</a></li>
-				{{else}}
-					<li><a class="linkToView" href="{{index $.UrlToFile $index}}">{{ $file }}.<a href="#"></a></a></li>
-        		{{end}}
-      		{{end}}
-		</ul>
-	</body>
+<head>
+    <meta charset="UTF-8">
+    <title>all your files</title>
+    <style>
+        .linkToView {
+            text-decoration: none;
+            color: inherit;
+        }
+
+        /* Hide the file input text indicator */
+        input[type="file"] {
+            color: transparent;
+        }
+    </style>
+</head>
+<body>
+<form action="{{$.UploadPath}}" method="POST" enctype="multipart/form-data" id="uploadForm">
+    <label for="file">Select files to upload:</label>
+    <input type="file" name="file" id="file" multiple onchange="uploadFiles()">
+    <input type="submit" value="Upload" style="display: none;">
+</form>
+
+<!-- Add checkboxes next to file names -->
+<ul>
+    {{range $index, $file := .FilesInDir}}
+    <li>
+        <input type="checkbox" name="selectedFiles" class="fileCheckbox">
+        {{if isDirectory .}}
+            <a href="{{index $.NextHop $index}}">{{ $file }}</a>
+        {{else}}
+            <a class="linkToView" href="{{index $.ViewPath $index}}">{{ $file }}. </a>
+            <a href="{{index $.DownloadPath $index}}"> click to download.</a>
+        {{end}}
+    </li>
+    {{end}}
+</ul>
+
+<!-- Add a delete button -->
+<button id="deleteButton" onclick="deleteSelected()">Delete Selected</button>
+
+<script>
+    function uploadFiles() {
+        document.getElementById('uploadForm').submit();
+    }
+
+    function deleteSelected() {
+        var checkboxes = document.querySelectorAll('.fileCheckbox:checked');
+        var selectedFiles = [];
+
+        checkboxes.forEach(function (checkbox) {
+            selectedFiles.push(checkbox.parentNode.textContent.trim()); // Assuming text content is the file name
+        });
+
+		fetch('{{$.DeletePath}}', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify({ files: selectedFiles }),
+		})
+    }
+</script>
+</body>
 </html>

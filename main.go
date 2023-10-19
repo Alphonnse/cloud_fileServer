@@ -57,23 +57,20 @@ func main() {
 	router.Get("/healthz", handlers.HandlerReadiness)
 	router.Get("/err", handlers.ErrorHandler)
 
-	router.Post("/signup", apiCfg.HandlerSignup)
+	// signin
+	router.Post("/signin", apiCfg.HandlerSignin)
+	router.Get("/signin", apiCfg.HandlerSigninTmpl)
+
+	// login
 	router.Post("/login", apiCfg.HandlerLogin)
+	router.Get("/login", apiCfg.HandlerLoginTmpl)
 
+	// FS
 	router.Route("/{username}/{base_dir}", func(r chi.Router) {
-		// and than i need to read the dir on OS and than with regexp
-		// give him access
-
 		// There might be a trouble with cookie, when using links into site
-		r.Get("/{path_of_dirs}*", apiWrapper.MiddlewareAuth(handlers.FS))
-
-		// r.Get("/{path_to_file}/{action}", apiWrapper.MiddlewareAuth(handlers.HandlerView))
-		
+		r.Handle("/{path_of_dirs}*", apiWrapper.MiddlewareAuth(handlers.FS))
 
 	})
-	// router.Get("/{username}/{base_dir}/{path_to_file}/{action}", apiWrapper.MiddlewareAuth(handlers.HandlerView))
-	// router.Get("/{username}/{base_dir}/{path_to_dirs}*", apiWrapper.MiddlewareAuth(handlers.ListFilesNew))
-	
 
 	// I need to use url parameters here and username in the start of url
 	// router.Get("/disk/upload", handlers.UploadGetHandler)
@@ -89,7 +86,6 @@ func main() {
 	// можно либо созать get обработчик для логина
 	// либо сделать, что этот обработывал и get и post
 	// ИЛИ ПРОСТО НЕ ЮЗАТЬ ЕГО
-	router.Get("/validation", apiWrapper.MiddlewareAuth(handlers.Validate))
 	// router.Get("/validation", handlers.Validate) // these how to use queries
 
 	srv := &http.Server{

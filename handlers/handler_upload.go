@@ -1,11 +1,14 @@
 package handlers
 
 import (
+	"fmt"
 	"html/template"
 	"io"
 	"log"
 	"net/http"
 	"os"
+
+	"github.com/Alphonnse/file_server/internal/database"
 )
 
 func UploadGetHandler(w http.ResponseWriter, r *http.Request) {
@@ -15,6 +18,11 @@ func UploadGetHandler(w http.ResponseWriter, r *http.Request) {
 		  	return
 		}
 	t.Execute(w, nil)
+}
+
+
+func TestUploadHandler(w http.ResponseWriter, r *http.Request, user database.User){
+	fmt.Println("from test upload")
 }
 
 

@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -18,16 +17,11 @@ type ApiConfig struct {
 	DB *database.Queries // its defined in db.go
 }
 
-func Validate(w http.ResponseWriter, r *http.Request, user database.User) {
-	ResondWithJSON(w, 200, "ure loggined in from validation")
+func (apiCfg *ApiConfig) HandlerSigninTmpl(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, "tmpl/signin/signin.html")
 }
 
-// func Validate(w http.ResponseWriter, r *http.Request) {
-// 	fmt.Println(r.URL.Query().Get("version"))
-// 	ResondWithJSON(w, 200, "ure loggined in from validation")
-// }
-
-func (apiCfg *ApiConfig) HandlerSignup(w http.ResponseWriter, r *http.Request) {
+func (apiCfg *ApiConfig) HandlerSignin(w http.ResponseWriter, r *http.Request) {
 
 	// getting the body of response
 	type signUpRecuestBody struct {
@@ -37,12 +31,16 @@ func (apiCfg *ApiConfig) HandlerSignup(w http.ResponseWriter, r *http.Request) {
 	}
 	body := signUpRecuestBody{}
 
-	decoder := json.NewDecoder(r.Body)
-	err := decoder.Decode(&body)
-	if err != nil {
-		RespondWithError(w, 400, fmt.Sprint("Error while parsing JSON:", err))
-		return
-	}
+	body.Name = r.FormValue("username")
+	body.Email = r.FormValue("email")
+	body.Password = r.FormValue("password")
+
+	// decoder := json.NewDecoder(r.Body)
+	// err := decoder.Decode(&body)
+	// if err != nil {
+	// 	RespondWithError(w, 400, fmt.Sprint("Error while parsing JSON:", err))
+	// 	return
+	// }
 
 	// hash the password
 	hash, err := bcrypt.GenerateFromPassword([]byte(body.Password), 10) // last argument is the coast
@@ -64,7 +62,12 @@ func (apiCfg *ApiConfig) HandlerSignup(w http.ResponseWriter, r *http.Request) {
 		RespondWithError(w, 500, fmt.Sprint("Error while creating the user:", err))
 	}
 
-	ResondWithJSON(w, 200, "signup method") // delete this than
+	http.Redirect(w, r, "/login", 301)
+}
+
+// login
+func (apiCfg *ApiConfig) HandlerLoginTmpl(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, "tmpl/login/login.html")
 }
 
 func (apiCfg *ApiConfig) HandlerLogin(w http.ResponseWriter, r *http.Request) {
@@ -77,12 +80,15 @@ func (apiCfg *ApiConfig) HandlerLogin(w http.ResponseWriter, r *http.Request) {
 
 	body := logInRequestBody{}
 
-	decoder := json.NewDecoder(r.Body)
-	err := decoder.Decode(&body)
-	if err != nil {
-		RespondWithError(w, 400, fmt.Sprint("Error while parsing JSON:", err))
-		return
-	}
+	body.Email = r.FormValue("email")
+	body.Password = r.FormValue("password")
+
+	// decoder := json.NewDecoder(r.Body)
+	// err := decoder.Decode(&body)
+	// if err != nil {
+	// 	RespondWithError(w, 400, fmt.Sprint("Error while parsing JSON:", err))
+	// 	return
+	// }
 
 	// Look up requested user
 
@@ -123,5 +129,5 @@ func (apiCfg *ApiConfig) HandlerLogin(w http.ResponseWriter, r *http.Request) {
 		SameSite: http.SameSiteDefaultMode,
 	}
 	http.SetCookie(w, &cookie)
-	ResondWithJSON(w, 200, "ure loggined in now")
+	http.Redirect(w, r, fmt.Sprintf("/"+user.Name+"/disk/files/"), 301)
 }
