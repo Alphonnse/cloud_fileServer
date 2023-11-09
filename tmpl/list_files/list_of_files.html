@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html>
 <head>
@@ -14,24 +13,40 @@
         input[type="file"] {
             color: transparent;
         }
+
+		.custom-button {
+			display: inline-block;
+			padding: 3px 6px; 
+			cursor: pointer;
+			color: #000; 
+			background-color: #f0f0f0; 
+			border: 1px solid #ccc; 
+			border-radius: 4px;
+			text-decoration: none; 
+			font-size: 16px;
+			font-family: 'Arial', sans-serif;
+			margin-bottom: 10px;
+		}
     </style>
 </head>
 <body>
 <form action="{{$.UploadPath}}" method="POST" enctype="multipart/form-data" id="uploadForm">
-    <label for="file">Select files to upload:</label>
+	<label for="file" class="custom-button">Choose files to upload</label>
     <input type="file" name="file" id="file" multiple onchange="uploadFiles()">
     <input type="submit" value="Upload" style="display: none;">
 </form>
 
-<!-- Add checkboxes next to file names -->
+<!-- Add a create dir path -->
+<button class="custom-button" id="newDirButton" onclick="newDir()">Create a directory</button>
+
 <ul>
     {{range $index, $file := .FilesInDir}}
     <li>
         <input type="checkbox" name="selectedFiles" class="fileCheckbox">
         {{if isDirectory .}}
-            <a href="{{index $.NextHop $index}}">{{ $file }}</a>
+            <a class="itsOnlyForDeleting" href="{{index $.NextHop $index}}">{{ $file }}</a>
         {{else}}
-            <a class="linkToView" href="{{index $.ViewPath $index}}">{{ $file }}. </a>
+            <a class="linkToView" href="{{index $.ViewPath $index}}">{{ $file }}</a>
             <a href="{{index $.DownloadPath $index}}"> click to download.</a>
         {{end}}
     </li>
@@ -39,9 +54,12 @@
 </ul>
 
 <!-- Add a delete button -->
-<button id="deleteButton" onclick="deleteSelected()">Delete Selected</button>
+<button class="custom-button" id="deleteButton" onclick="deleteSelected()">Delete selected</button>
 
 <script>
+	const input = document.querySelector("input");
+	input.style.opacity = 0;
+
     function uploadFiles() {
         document.getElementById('uploadForm').submit();
     }
@@ -50,9 +68,16 @@
         var checkboxes = document.querySelectorAll('.fileCheckbox:checked');
         var selectedFiles = [];
 
-        checkboxes.forEach(function (checkbox) {
-            selectedFiles.push(checkbox.parentNode.textContent.trim()); // Assuming text content is the file name
-        });
+		checkboxes.forEach(function (checkbox) {
+			// Traverse the DOM to find the correct anchor element
+			var anchorElement = checkbox.parentNode.querySelector('.linkToView, .itsOnlyForDeleting');
+			if (anchorElement) {
+				var fileName = anchorElement.textContent.trim();
+				// Remove "click to download" from the file name
+				fileName = fileName.replace(' click to download.', '');
+				selectedFiles.push(fileName);
+			}
+		}); 
 
 		fetch('{{$.DeletePath}}', {
 			method: 'POST',
@@ -60,8 +85,25 @@
 				'Content-Type': 'application/json',
 			},
 			body: JSON.stringify({ files: selectedFiles }),
-		})
+		}).then(function(response) {
+			window.location.reload();
+    	});
     }
+
+	function newDir() {
+		var dirName = prompt("Enter the dir name:")
+		if (dirName) {
+			fetch('{{$.CreatePath}}', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({directoryName: dirName}),
+			}).then(function(response) {
+				window.location.reload();
+			});
+		}			
+	}
 </script>
 </body>
 </html>

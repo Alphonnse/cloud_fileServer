@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"io"
@@ -43,8 +44,20 @@ type Page struct {
 	ViewPath     []string
 	DownloadPath []string
 	UploadPath   string
-	DeletePath string
+	DeletePath   string
+	CreatePath   string
 }
+
+func getFilesInDir(w http.ResponseWriter, r *http.Request, user database.User) []string{
+	filesInDir, err := entriesFromDir(r.URL.Path[len(fmt.Sprintf("/"+user.Name+"/disk/")):])
+	if err != nil {
+		log.Println("there is error while reading the dir:", r.URL.Path[len(fmt.Sprintf("/"+user.Name+"/disk/")):])
+		RespondWithError(w, 401, "Error while reading directory")
+		return nil
+	}
+	return filesInDir
+}
+
 
 func FS(w http.ResponseWriter, r *http.Request, user database.User) {
 	// There might be a trouble with cookie, when using links into site
@@ -54,7 +67,6 @@ func FS(w http.ResponseWriter, r *http.Request, user database.User) {
 	}
 
 	page := &Page{}
-	var err error
 
 	if r.URL.Query().Get("action") == "view" {
 		// view handler
@@ -75,7 +87,8 @@ func FS(w http.ResponseWriter, r *http.Request, user database.User) {
 		w.Header().Set("Content-Type", "application/json")
 
 		// get the file name to download from url
-		name := r.URL.Query().Get("name")
+		name := r.URL.Query().Get("name") // Error is here whern i am finding out the name of download file
+		fmt.Println(name)
 
 		// join to get the full file path
 		directory := filepath.Join("files", name)
@@ -100,8 +113,6 @@ func FS(w http.ResponseWriter, r *http.Request, user database.User) {
 			return
 		}
 
-		substring := "?action=upload"
-
 		for {
 			part, err := reader.NextPart()
 			if err != nil {
@@ -111,12 +122,23 @@ func FS(w http.ResponseWriter, r *http.Request, user database.User) {
 
 			if part.FormName() == "file" {
 
-				// err := os.MkdirAll("./files", os.ModePerm) 
+				// err := os.MkdirAll("./files", os.ModePerm)
 				// if err != nil {
 				// 	log.Println("error while reading dir")
 				// }
 
-				dst, err := os.Create(strings.Replace("./"+r.URL.Path[len("arsen5/disk/"):], substring, "", -1) +"/"+part.FileName()) // Change this
+				// dst, err := os.Create(strings.Replace("./"+r.URL.Path[len("arsen5/disk/"):], substring, "", -1) + "/" + part.FileName()) // Change this
+
+				page.FilesInDir = getFilesInDir(w, r, user)
+
+				for _, file := range page.FilesInDir {
+					if part.FileName() == file {
+						RespondWithError(w, 401, "file with this name already exists")
+						return
+					}
+				}
+
+				dst, err := os.Create("./"+r.URL.Path[len("arsen5/disk/"):] + "/" + part.FileName()) // Change this
 				if err != nil {
 					log.Println("err while creating the file", err)
 					RespondWithError(w, 401, "error while creating the file")
@@ -136,26 +158,74 @@ func FS(w http.ResponseWriter, r *http.Request, user database.User) {
 				return
 			}
 		}
-		http.Redirect(w, r, strings.Replace(r.URL.Path, substring, "", -1), 301)
+		http.Redirect(w, r, r.URL.Path, 301)
 
 	} else if r.URL.Query().Get("action") == "delete" && r.Method == "POST" {
-		fmt.Println("delete handler")
-	} else {
-		// Hop handler
-		page.FilesInDir, err = entriesFromDir(r.URL.Path[len(fmt.Sprintf("/"+user.Name+"/disk/")):])
+		type deleteFiles struct {
+			Files []string
+		}
+		files := deleteFiles{}
+		decoder := json.NewDecoder(r.Body)
+		err := decoder.Decode(&files)
 		if err != nil {
-			log.Println("there is error while reading the dir:", r.URL.Path[len(fmt.Sprintf("/"+user.Name+"/disk/")):])
-			RespondWithError(w, 401, "Error while reading directory")
+			RespondWithError(w, 500, fmt.Sprintf("error while decoding JSON"))
+		}
+
+		rightURL := r.URL.Path[len("/arsen5/disk/"):] // change
+
+		for _, item := range files.Files {
+			err := os.RemoveAll(filepath.Join(".", rightURL, item))
+			if err != nil {
+				RespondWithError(w, 500, fmt.Sprintf("error while removing file"))
+			}
+		}
+
+	} else if r.URL.Query().Get("action") == "create" && r.Method == "POST"{
+		rightURL := r.URL.Path[len("/arsen5/disk/"):] // change
+
+		type CreateDir struct {
+			DirectoryName string 
+		}
+		var dirName CreateDir
+		decoder := json.NewDecoder(r.Body)
+		err := decoder.Decode(&dirName)
+		if err != nil {
+			RespondWithError(w, http.StatusInternalServerError, "Error while decoding JSON")
+			fmt.Println(err)
 			return
 		}
+
+
+		page.FilesInDir = getFilesInDir(w, r, user)
+		for _, file := range page.FilesInDir {
+			if !strings.HasSuffix(dirName.DirectoryName, "/") {
+				dirName.DirectoryName += "/"
+			}
+
+			if file == dirName.DirectoryName {
+				RespondWithError(w, http.StatusBadRequest, "directory with that name already exists")
+				return
+			}
+		}
+
+		err = os.Mkdir((filepath.Join(".",rightURL,dirName.DirectoryName)), os.FileMode(0777))
+		if err != nil {
+			RespondWithError(w, http.StatusInternalServerError, "error while creating the dir")
+			return
+		}
+	} else {
+		// Hop handler
+		page.FilesInDir = getFilesInDir(w, r, user)
 
 		// Upload link
 		if strings.HasSuffix(r.URL.Path, "/") {
 			page.UploadPath = fmt.Sprintf(r.URL.Path[:len(r.URL.Path)-len("/")] + "?action=upload")
 			page.DeletePath = fmt.Sprintf(r.URL.Path[:len(r.URL.Path)-len("/")] + "?action=delete")
+			page.CreatePath = fmt.Sprintf(r.URL.Path[:len(r.URL.Path)-len("/")] + "?action=create")
 		} else {
 			page.UploadPath = fmt.Sprintf(r.URL.Path + "?action=upload")
 			page.DeletePath = fmt.Sprintf(r.URL.Path + "?action=delete")
+			page.CreatePath = fmt.Sprintf(r.URL.Path + "?action=create")
 		}
 
 		for i := 0; i < len(page.FilesInDir); i++ {
@@ -176,7 +246,6 @@ func FS(w http.ResponseWriter, r *http.Request, user database.User) {
 				page.DownloadPath = append(page.DownloadPath, "nil")
 			}
 		}
-		fmt.Println(page.DeletePath)
 
 		t, err := template.New("list_of_files.html").Funcs(template.FuncMap{"isDirectory": isDirectory}).ParseFiles("tmpl/list_files/list_of_files.html")
 		if err != nil {
@@ -185,6 +254,7 @@ func FS(w http.ResponseWriter, r *http.Request, user database.User) {
 			return
 		}
 		t.Execute(w, page)
+		fmt.Println(page.DownloadPath)
 	}
 
 }
